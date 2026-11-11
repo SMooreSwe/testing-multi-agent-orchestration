@@ -1,0 +1,742 @@
+/* ==========================================================================
+   Project Pulse — dashboard styles
+   Contract: docs/project-pulse-plan.md, section 5.
+   Plain CSS, system fonts, no external dependencies.
+   ========================================================================== */
+
+/* ---------- Design tokens ---------- */
+:root {
+  /* Neutrals */
+  --pp-bg: #f3f5fa;
+  --pp-surface: #ffffff;
+  --pp-text: #1f2937;          /* 14.7:1 on white */
+  --pp-text-muted: #4b5563;    /* 7.6:1 on white */
+  --pp-border: #dfe3ec;
+  --pp-track: #e5e7eb;
+
+  /* Brand */
+  --pp-brand-dark: #1e1b4b;
+  --pp-brand: #3730a3;
+  --pp-focus: #4338ca;
+
+  /* Status palette: background / text / accent (AA on its own background) */
+  --pp-not-started-bg: #eef1f5;
+  --pp-not-started-fg: #374151;
+  --pp-not-started-accent: #6b7280;
+
+  --pp-on-track-bg: #dcfce7;
+  --pp-on-track-fg: #14532d;
+  --pp-on-track-accent: #15803d;
+
+  --pp-at-risk-bg: #fef3c7;
+  --pp-at-risk-fg: #78350f;
+  --pp-at-risk-accent: #b45309;
+
+  --pp-blocked-bg: #fee2e2;
+  --pp-blocked-fg: #7f1d1d;
+  --pp-blocked-accent: #b91c1c;
+
+  --pp-completed-bg: #dbeafe;
+  --pp-completed-fg: #1e3a8a;
+  --pp-completed-accent: #1d4ed8;
+
+  --pp-unknown-bg: #f3f4f6;
+  --pp-unknown-fg: #374151;
+  --pp-unknown-accent: #6b7280;
+
+  /* Priority palette (violet family, distinct from status colors) */
+  --pp-priority: #5b21b6;      /* white text on it: 8.6:1; on white: 8.6:1 */
+  --pp-priority-soft: #ede9fe;
+
+  /* Shape */
+  --pp-radius-lg: 1rem;
+  --pp-radius: 0.75rem;
+  --pp-radius-pill: 999px;
+  --pp-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06), 0 1px 3px rgba(15, 23, 42, 0.08);
+  --pp-shadow: 0 2px 4px rgba(15, 23, 42, 0.05), 0 8px 24px rgba(15, 23, 42, 0.08);
+  --pp-shadow-lift: 0 4px 8px rgba(15, 23, 42, 0.08), 0 16px 32px rgba(15, 23, 42, 0.12);
+
+  --pp-gap: 1.25rem;
+  --pp-page-pad: 1.5rem;
+}
+
+/* ---------- Base ---------- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* Never let component display rules override the hidden attribute. */
+[hidden] {
+  display: none !important;
+}
+
+html {
+  font-size: 100%; /* 16px default, respects user settings */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--pp-bg);
+  color: var(--pp-text);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+    "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+  font-size: 1rem;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+  outline: 3px solid var(--pp-focus);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  clip-path: inset(50%) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+/* ---------- Dashboard layout ---------- */
+.dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pp-gap);
+  width: 100%;
+  max-width: 75rem; /* ~1200px */
+  margin: 0 auto;
+  padding: var(--pp-page-pad);
+}
+
+/* ---------- Header ---------- */
+.dashboard__header {
+  position: relative;
+  overflow: hidden;
+  padding: 1.75rem 1.75rem 1.5rem;
+  border-radius: var(--pp-radius-lg);
+  background: linear-gradient(135deg, var(--pp-brand-dark) 0%, var(--pp-brand) 100%);
+  color: #ffffff;
+  box-shadow: var(--pp-shadow);
+}
+
+/* Decorative "pulse" ring — purely visual, no content. */
+.dashboard__header::after {
+  content: "";
+  position: absolute;
+  top: -3rem;
+  right: -3rem;
+  width: 11rem;
+  height: 11rem;
+  border-radius: 50%;
+  border: 1.5rem solid rgba(255, 255, 255, 0.07);
+  pointer-events: none;
+}
+
+.dashboard__title {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0;
+  font-size: clamp(1.75rem, 1.4rem + 1.5vw, 2.5rem);
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+
+/* Small pulse dot before the title (decorative). */
+.dashboard__title::before {
+  content: "";
+  flex: none;
+  width: 0.6em;
+  height: 0.6em;
+  border-radius: 50%;
+  background: #4ade80;
+  box-shadow: 0 0 0 0.2em rgba(74, 222, 128, 0.3);
+  animation: pp-pulse 2.4s ease-in-out infinite;
+}
+
+.dashboard__subtitle {
+  position: relative;
+  margin: 0.5rem 0 0;
+  color: #e0e7ff; /* ~10:1 on brand gradient */
+  font-size: 1.0625rem;
+  overflow-wrap: anywhere;
+}
+
+/* ---------- Summary strip ---------- */
+.dashboard__summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.summary-stat {
+  --stat-accent: var(--pp-unknown-accent);
+  display: flex;
+  flex: 1 1 9rem;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--pp-border);
+  border-left: 5px solid var(--stat-accent);
+  border-radius: var(--pp-radius);
+  background: var(--pp-surface);
+  box-shadow: var(--pp-shadow-sm);
+}
+
+.summary-stat[data-status="not-started"] { --stat-accent: var(--pp-not-started-accent); }
+.summary-stat[data-status="on-track"]    { --stat-accent: var(--pp-on-track-accent); }
+.summary-stat[data-status="at-risk"]     { --stat-accent: var(--pp-at-risk-accent); }
+.summary-stat[data-status="blocked"]     { --stat-accent: var(--pp-blocked-accent); }
+.summary-stat[data-status="completed"]   { --stat-accent: var(--pp-completed-accent); }
+.summary-stat[data-status="unknown"]     { --stat-accent: var(--pp-unknown-accent); border-left-style: dashed; }
+
+.summary-stat__count {
+  font-size: 1.75rem;
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--pp-text);
+}
+
+.summary-stat__label {
+  min-width: 0;
+  color: var(--pp-text-muted);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+/* ---------- Loading / empty / error states ---------- */
+.dashboard__state {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--pp-border);
+  border-radius: var(--pp-radius);
+  background: var(--pp-surface);
+  color: var(--pp-text);
+  box-shadow: var(--pp-shadow-sm);
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.dashboard__state::before {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  font-weight: 800;
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+.dashboard__state[data-state="loading"] {
+  color: var(--pp-text-muted);
+}
+
+.dashboard__state[data-state="loading"]::before {
+  content: "";
+  border: 3px solid var(--pp-track);
+  border-top-color: var(--pp-brand);
+  animation: pp-spin 0.9s linear infinite;
+}
+
+.dashboard__state[data-state="empty"] {
+  justify-content: center;
+  padding: 2.5rem 1.25rem;
+  border: 2px dashed #c7cdd9;
+  background: transparent;
+  box-shadow: none;
+  color: var(--pp-text-muted);
+  text-align: center;
+}
+
+.dashboard__state[data-state="empty"]::before {
+  content: "\2205"; /* ∅ */
+  content: "\2205" / "";
+  background: var(--pp-track);
+  color: var(--pp-text-muted);
+}
+
+.dashboard__state[data-state="error"] {
+  border: 1px solid #fca5a5;
+  border-left: 6px solid var(--pp-blocked-accent);
+  background: #fef2f2;
+  color: var(--pp-blocked-fg); /* ~9:1 on #fef2f2 */
+  font-weight: 600;
+}
+
+.dashboard__state[data-state="error"]::before {
+  content: "!";
+  content: "!" / "";
+  background: var(--pp-blocked-accent);
+  color: #ffffff;
+}
+
+/* ---------- Project grid ---------- */
+.project-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr));
+  gap: var(--pp-gap);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.project-grid__item {
+  display: flex; /* cards stretch to equal row height */
+  min-width: 0;
+}
+
+/* ---------- Project card ---------- */
+.project-card {
+  --card-accent: transparent;
+  --fill-color: #0f766e; /* default progress fill (teal), 5.5:1 on track */
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  width: 100%;
+  min-width: 0;
+  padding: 1.25rem 1.25rem 1.1rem;
+  border: 1px solid var(--pp-border);
+  border-left: 5px solid var(--card-accent);
+  border-radius: var(--pp-radius-lg);
+  background: var(--pp-surface);
+  box-shadow: var(--pp-shadow);
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.project-card:hover,
+.project-card:focus-within {
+  transform: translateY(-2px);
+  box-shadow: var(--pp-shadow-lift);
+}
+
+/* Priority accent on the card edge: high stands out, others stay quiet. */
+.project-card[data-priority="high"]    { --card-accent: var(--pp-priority); }
+.project-card[data-priority="medium"]  { --card-accent: #a78bfa; }
+.project-card[data-priority="low"]     { --card-accent: var(--pp-border); }
+.project-card[data-priority="unknown"] { --card-accent: var(--pp-border); }
+
+/* Status-specific progress fill colors. */
+.project-card[data-status="not-started"] { --fill-color: var(--pp-not-started-accent); }
+.project-card[data-status="on-track"]    { --fill-color: var(--pp-on-track-accent); }
+.project-card[data-status="at-risk"]     { --fill-color: var(--pp-at-risk-accent); }
+.project-card[data-status="blocked"]     { --fill-color: var(--pp-blocked-accent); }
+.project-card[data-status="completed"]   { --fill-color: var(--pp-completed-accent); }
+.project-card[data-status="unknown"]     { --fill-color: var(--pp-unknown-accent); }
+
+.project-card__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem 0.75rem;
+}
+
+.project-card__name {
+  flex: 1 1 10rem;
+  min-width: 0;
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--pp-text);
+  overflow-wrap: anywhere;
+}
+
+.project-card__label {
+  display: inline-block;
+  margin-right: 0.4rem;
+  color: var(--pp-text-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.project-card__owner {
+  margin: 0;
+  color: var(--pp-text);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.project-card__summary {
+  margin: 0;
+  color: var(--pp-text-muted);
+  overflow-wrap: anywhere;
+}
+
+/* ---------- Status badge ---------- */
+.status-badge {
+  --badge-bg: var(--pp-unknown-bg);
+  --badge-fg: var(--pp-unknown-fg);
+  --badge-dot: var(--pp-unknown-accent);
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 0.4rem;
+  max-width: 100%;
+  padding: 0.25rem 0.7rem;
+  border: 1px solid transparent;
+  border-radius: var(--pp-radius-pill);
+  background: var(--badge-bg);
+  color: var(--badge-fg);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.status-badge::before {
+  content: "";
+  flex: none;
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background: var(--badge-dot);
+}
+
+.status-badge[data-status="not-started"] {
+  --badge-bg: var(--pp-not-started-bg);
+  --badge-fg: var(--pp-not-started-fg);
+  --badge-dot: transparent;
+}
+/* Not started: hollow dot (shape cue, not just color). */
+.status-badge[data-status="not-started"]::before {
+  border: 2px solid var(--pp-not-started-accent);
+}
+
+.status-badge[data-status="on-track"] {
+  --badge-bg: var(--pp-on-track-bg);
+  --badge-fg: var(--pp-on-track-fg);
+  --badge-dot: var(--pp-on-track-accent);
+}
+
+.status-badge[data-status="at-risk"] {
+  --badge-bg: var(--pp-at-risk-bg);
+  --badge-fg: var(--pp-at-risk-fg);
+  --badge-dot: var(--pp-at-risk-accent);
+}
+/* At risk: diamond marker. */
+.status-badge[data-status="at-risk"]::before {
+  border-radius: 1px;
+  transform: rotate(45deg);
+}
+
+.status-badge[data-status="blocked"] {
+  --badge-bg: var(--pp-blocked-bg);
+  --badge-fg: var(--pp-blocked-fg);
+  --badge-dot: var(--pp-blocked-accent);
+}
+/* Blocked: square marker. */
+.status-badge[data-status="blocked"]::before {
+  border-radius: 2px;
+}
+
+.status-badge[data-status="completed"] {
+  --badge-bg: var(--pp-completed-bg);
+  --badge-fg: var(--pp-completed-fg);
+  --badge-dot: var(--pp-completed-accent);
+}
+
+.status-badge[data-status="unknown"] {
+  --badge-bg: var(--pp-unknown-bg);
+  --badge-fg: var(--pp-unknown-fg);
+  --badge-dot: transparent;
+  border: 1px dashed var(--pp-unknown-accent);
+}
+.status-badge[data-status="unknown"]::before {
+  border: 2px dashed var(--pp-unknown-accent);
+}
+
+/* ---------- Meta: priority + due date ---------- */
+.project-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.5rem;
+  margin: 0;
+  padding: 0.75rem 0;
+  border-top: 1px solid var(--pp-border);
+  border-bottom: 1px solid var(--pp-border);
+}
+
+.project-card__meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.project-card__meta dt {
+  color: var(--pp-text-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.project-card__meta dd {
+  margin: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.priority-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.15rem 0.65rem;
+  border: 2px solid var(--pp-priority);
+  border-radius: var(--pp-radius);
+  background: var(--pp-surface);
+  color: var(--pp-priority);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+/* High: solid fill + upward marker — most prominent. */
+.priority-tag[data-priority="high"] {
+  background: var(--pp-priority);
+  color: #ffffff;
+}
+.priority-tag[data-priority="high"]::before {
+  content: "\25B2"; /* ▲ */
+  content: "\25B2" / "";
+  font-size: 0.65em;
+}
+
+/* Medium: soft tint + outline. */
+.priority-tag[data-priority="medium"] {
+  background: var(--pp-priority-soft);
+  color: var(--pp-priority); /* 7.2:1 on #ede9fe */
+}
+
+/* Low: quiet neutral outline. */
+.priority-tag[data-priority="low"] {
+  border-color: #9ca3af;
+  color: var(--pp-text-muted);
+}
+.priority-tag[data-priority="low"]::before {
+  content: "\25BC"; /* ▼ */
+  content: "\25BC" / "";
+  font-size: 0.65em;
+}
+
+/* Unknown / "Not set": dashed neutral. */
+.priority-tag[data-priority="unknown"] {
+  border-style: dashed;
+  border-color: #9ca3af;
+  color: var(--pp-text-muted);
+  font-style: italic;
+}
+
+.project-card__due {
+  color: var(--pp-text);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.project-card__due[data-overdue="true"] {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.1rem 0.5rem;
+  border: 1px solid #fca5a5;
+  border-radius: 0.375rem;
+  background: var(--pp-blocked-bg);
+  color: var(--pp-blocked-fg); /* ~8:1 on #fee2e2 */
+  font-weight: 700;
+}
+
+.project-card__due[data-overdue="true"]::before {
+  content: "!";
+  content: "!" / "";
+  display: inline-grid;
+  place-items: center;
+  width: 1.05rem;
+  height: 1.05rem;
+  border-radius: 50%;
+  background: var(--pp-blocked-accent);
+  color: #ffffff;
+  font-size: 0.75rem;
+  line-height: 1;
+}
+
+/* ---------- Progress ---------- */
+.project-card__progress {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.progress-bar {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 0.6rem;
+  overflow: hidden;
+  border-radius: var(--pp-radius-pill);
+  background: var(--pp-track);
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.12);
+}
+
+.progress-bar__fill {
+  width: var(--progress, 0%);
+  max-width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--fill-color, #0f766e);
+  transition: width 400ms ease;
+}
+
+.progress-bar__value {
+  flex: none;
+  min-width: 2.75rem;
+  color: var(--pp-text);
+  font-size: 0.9375rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* When the bar is hidden (unknown progress), let "Not reported" read naturally. */
+.progress-bar[hidden] + .progress-bar__value {
+  color: var(--pp-text-muted);
+  font-style: italic;
+  font-weight: 500;
+  text-align: left;
+}
+
+/* ---------- Recent activity ---------- */
+.project-card__activity {
+  margin: auto 0 0; /* pin to card bottom for even rows */
+  padding: 0.75rem 0.85rem;
+  border-radius: var(--pp-radius);
+  background: #f8fafc;
+  color: var(--pp-text);
+  font-size: 0.9375rem;
+  overflow-wrap: anywhere;
+}
+
+.project-card__activity .project-card__label {
+  display: block;
+  margin: 0 0 0.2rem;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 30rem) {
+  :root {
+    --pp-page-pad: 0.75rem;
+    --pp-gap: 1rem;
+  }
+
+  .dashboard__header {
+    padding: 1.25rem 1.1rem;
+  }
+
+  .summary-stat {
+    flex-basis: calc(50% - 0.375rem);
+    padding: 0.6rem 0.75rem;
+  }
+
+  .summary-stat__count {
+    font-size: 1.4rem;
+  }
+
+  .project-card {
+    padding: 1rem;
+  }
+
+  /* Allow long status labels to wrap on tiny screens. */
+  .status-badge {
+    white-space: normal;
+  }
+}
+
+@media (min-width: 64rem) {
+  :root {
+    --pp-page-pad: 2rem;
+    --pp-gap: 1.5rem;
+  }
+
+  .dashboard__header {
+    padding: 2.25rem 2.25rem 2rem;
+  }
+}
+
+/* Windows High Contrast / forced colors: keep structure visible. */
+@media (forced-colors: active) {
+  .status-badge,
+  .priority-tag,
+  .summary-stat,
+  .dashboard__state {
+    border: 1px solid CanvasText;
+  }
+
+  .progress-bar {
+    border: 1px solid CanvasText;
+  }
+
+  .progress-bar__fill {
+    background: Highlight;
+  }
+}
+
+/* ---------- Motion ---------- */
+@keyframes pp-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes pp-pulse {
+  0%, 100% { box-shadow: 0 0 0 0.15em rgba(74, 222, 128, 0.35); }
+  50%      { box-shadow: 0 0 0 0.35em rgba(74, 222, 128, 0.1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .project-card:hover,
+  .project-card:focus-within {
+    transform: none;
+  }
+
+  /* Static loading indicator instead of a spinner. */
+  .dashboard__state[data-state="loading"]::before {
+    animation: none;
+    border-top-color: var(--pp-track);
+    border-color: var(--pp-brand);
+  }
+}

@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Project Pulse</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="dashboard" aria-labelledby="dashboard-title">
+    <header class="dashboard__header">
+      <h1 id="dashboard-title" class="dashboard__title">Project Pulse</h1>
+      <p class="dashboard__subtitle">Mona's projects at a glance</p>
+    </header>
+    <ul class="dashboard__summary" aria-label="Projects by status" hidden></ul>
+    <div class="dashboard__state" data-state="loading" role="status" aria-live="polite">Loading projects…</div>
+    <ul class="project-grid" aria-label="Projects" hidden></ul>
+  </main>
+  <script>
+    (function () {
+      "use strict";
+
+      var DATA_URL = "project-data.json";
+      var SUBTITLE_TEXT = "Mona's projects at a glance";
+
+      var STATUS_LABELS = {
+        "not-started": "Not started",
+        "on-track": "On track",
+        "at-risk": "At risk",
+        "blocked": "Blocked",
+        "completed": "Completed",
+        "unknown": "Unknown"
+      };
+      var KNOWN_STATUSES = ["not-started", "on-track", "at-risk", "blocked", "completed"];
+
+      var PRIORITY_LABELS = {
+        "high": "High",
+        "medium": "Medium",
+        "low": "Low",
+        "unknown": "Not set"
+      };
+
+      var DATE_FORMATTER = new Intl.DateTimeFormat("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric"
+      });
+
+      var subtitleElement = document.querySelector(".dashboard__subtitle");
+      var summaryElement = document.querySelector(".dashboard__summary");
+      var stateElement = document.querySelector(".dashboard__state");
+      var gridElement = document.querySelector(".project-grid");
+
+      /* ---------- State handling ---------- */
+
+      function showState(state, message) {
+        stateElement.setAttribute("data-state", state);
+        stateElement.textContent = message;
+        if (state === "error") {
+          stateElement.setAttribute("role", "alert");
+          stateElement.setAttribute("aria-live", "assertive");
+        } else {
+          stateElement.setAttribute("role", "status");
+          stateElement.setAttribute("aria-live", "polite");
+        }
+        stateElement.hidden = false;
+      }
+
+      function hideState() {
+        stateElement.hidden = true;
+        stateElement.textContent = "";
+      }
+
+      function DataError(message) {
+        this.name = "DataError";
+        this.message = message;
+      }
+      DataError.prototype = Object.create(Error.prototype);
+      DataError.prototype.constructor = DataError;
+
+      /* ---------- Cleanup helpers (plan section 5.5) ---------- */
+
+      function cleanText(value, fallback) {
+        if (typeof value !== "string") {
+          return fallback;
+        }
+        var trimmed = value.trim();
+        return trimmed === "" ? fallback : trimmed;
+      }
+
+      function toSlug(value) {
+        if (typeof value !== "string") {
+          return "";
+        }
+        return value.trim().toLowerCase().replace(/[\s_]+/g, "-");
+      }
+
+      function normalizeStatus(value) {
+        var slug = toSlug(value);
+        return KNOWN_STATUSES.indexOf(slug) !== -1 ? slug : "unknown";
+      }
+
+      function normalizePriority(value) {
+        var slug = toSlug(value);
+        return (slug === "high" || slug === "medium" || slug === "low") ? slug : "unknown";
+      }
+
+      function normalizeProgress(value) {
+        if (typeof value !== "number" || !isFinite(value)) {
+          return null;
+        }
+        return Math.min(100, Math.max(0, Math.round(value)));
+      }
+
+      /* Parses "YYYY-MM-DD" as a local date. Returns null when invalid. */
+      function parseLocalDate(value) {
+        if (typeof value !== "string") {
+          return null;
+        }
+        var match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
+        if (!match) {
+          return null;
+        }
+        var year = Number(match[1]);
+        var monthIndex = Number(match[2]) - 1;
+        var day = Number(match[3]);
+        var date = new Date(year, monthIndex, day);
+        var isRealDate = date.getFullYear() === year &&
+          date.getMonth() === monthIndex &&
+          date.getDate() === day;
+        return isRealDate ? { date: date, iso: match[0] } : null;
+      }
+
+      function startOfToday() {
+        var now = new Date();
+        return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      }
+
+      function makeUniqueId(rawId, index, usedIds) {
+        var candidate = toSlug(rawId).replace(/[^a-z0-9-]/g, "");
+        if (candidate === "" || usedIds[candidate]) {
+          candidate = "project-" + index;
+        }
+        while (usedIds[candidate]) {
+          candidate = candidate + "-dup";
+        }
+        usedIds[candidate] = true;
+        return candidate;
+      }
+
+      function normalizeProject(raw, index, usedIds) {
+        var source = (raw !== null && typeof raw === "object") ? raw : {};
+        return {
+          id: makeUniqueId(source.id, index, usedIds),
+          name: cleanText(source.name, "Untitled project"),
+          owner: cleanText(source.owner, "Unassigned"),
+          status: normalizeStatus(source.status),
+          priority: normalizePriority(source.priority),
+          progress: normalizeProgress(source.progress),
+          due: parseLocalDate(source.dueDate),
+          summary: cleanText(source.summary, "No summary provided."),
+          recentActivity: cleanText(source.recentActivity, "No recent activity.")
+        };
+      }
+
+      /* ---------- DOM builders (data is inserted with textContent only) ---------- */
+
+      function createElement(tagName, className, text) {
+        var element = document.createElement(tagName);
+        if (className) {
+          element.className = className;
+        }
+        if (text !== undefined) {
+          element.textContent = text;
+        }
+        return element;
+      }
+
+      function createLabelledLine(className, labelText, valueText) {
+        var line = createElement("p", className);
+        line.appendChild(createElement("span", "project-card__label", labelText));
+        line.appendChild(document.createTextNode(" " + valueText));
+        return line;
+      }
+
+      function createMetaItem(termText, valueNode) {
+        var item = createElement("div", "project-card__meta-item");
+        item.appendChild(createElement("dt", null, termText));
+        var definition = createElement("dd");
+        definition.appendChild(valueNode);
+        item.appendChild(definition);
+        return item;
+      }
+
+      function createDueNode(project) {
+        if (!project.due) {
+          return createElement("span", "project-card__due", "No due date");
+        }
+        var timeElement = createElement("time", "project-card__due");
+        timeElement.setAttribute("datetime", project.due.iso);
+        var label = DATE_FORMATTER.format(project.due.date);
+        var isOverdue = project.status !== "completed" && project.due.date < startOfToday();
+        if (isOverdue) {
+          timeElement.setAttribute("data-overdue", "true");
+          label += " · Overdue";
+        }
+        timeElement.textContent = label;
+        return timeElement;
+      }
+
+      function createProgressSection(project) {
+        var section = createElement("div", "project-card__progress");
+        var bar = createElement("div", "progress-bar");
+        bar.setAttribute("role", "progressbar");
+        bar.setAttribute("aria-valuemin", "0");
+        bar.setAttribute("aria-valuemax", "100");
+        bar.setAttribute("aria-label", "Progress for " + project.name);
+        bar.appendChild(createElement("div", "progress-bar__fill"));
+
+        var valueText;
+        if (project.progress === null) {
+          bar.hidden = true;
+          valueText = "Not reported";
+        } else {
+          bar.setAttribute("aria-valuenow", String(project.progress));
+          valueText = project.progress + "%";
+        }
+        section.appendChild(bar);
+        section.appendChild(createElement("span", "progress-bar__value", valueText));
+        return section;
+      }
+
+      function createProjectCard(project) {
+        var item = createElement("li", "project-grid__item");
+        var nameId = "project-" + project.id + "-name";
+
+        var card = createElement("article", "project-card");
+        card.setAttribute("data-status", project.status);
+        card.setAttribute("data-priority", project.priority);
+        card.setAttribute("aria-labelledby", nameId);
+        if (project.progress !== null) {
+          card.style.setProperty("--progress", project.progress + "%");
+        }
+
+        var header = createElement("header", "project-card__header");
+        var name = createElement("h2", "project-card__name", project.name);
+        name.id = nameId;
+        header.appendChild(name);
+
+        var badge = createElement("span", "status-badge");
+        badge.setAttribute("data-status", project.status);
+        badge.appendChild(createElement("span", "visually-hidden", "Status: "));
+        badge.appendChild(document.createTextNode(STATUS_LABELS[project.status]));
+        header.appendChild(badge);
+        card.appendChild(header);
+
+        card.appendChild(createLabelledLine("project-card__owner", "Owner", project.owner));
+        card.appendChild(createElement("p", "project-card__summary", project.summary));
+
+        var meta = createElement("dl", "project-card__meta");
+        var priorityTag = createElement("span", "priority-tag", PRIORITY_LABELS[project.priority]);
+        priorityTag.setAttribute("data-priority", project.priority);
+        meta.appendChild(createMetaItem("Priority", priorityTag));
+        meta.appendChild(createMetaItem("Due", createDueNode(project)));
+        card.appendChild(meta);
+
+        card.appendChild(createProgressSection(project));
+        card.appendChild(createLabelledLine("project-card__activity", "Recent activity", project.recentActivity));
+
+        item.appendChild(card);
+        return item;
+      }
+
+      function renderSummary(projects) {
+        var counts = {};
+        KNOWN_STATUSES.concat("unknown").forEach(function (status) {
+          counts[status] = 0;
+        });
+        projects.forEach(function (project) {
+          counts[project.status] += 1;
+        });
+
+        var statusesToShow = KNOWN_STATUSES.slice();
+        if (counts.unknown > 0) {
+          statusesToShow.push("unknown");
+        }
+
+        summaryElement.textContent = "";
+        statusesToShow.forEach(function (status) {
+          var stat = createElement("li", "summary-stat");
+          stat.setAttribute("data-status", status);
+          stat.appendChild(createElement("span", "summary-stat__count", String(counts[status])));
+          stat.appendChild(document.createTextNode(" "));
+          stat.appendChild(createElement("span", "summary-stat__label", STATUS_LABELS[status]));
+          summaryElement.appendChild(stat);
+        });
+        summaryElement.hidden = false;
+      }
+
+      function renderSubtitle(lastUpdatedValue) {
+        var lastUpdated = parseLocalDate(lastUpdatedValue);
+        subtitleElement.textContent = lastUpdated
+          ? SUBTITLE_TEXT + " · Last updated " + DATE_FORMATTER.format(lastUpdated.date)
+          : SUBTITLE_TEXT;
+      }
+
+      function renderDashboard(data) {
+        var usedIds = {};
+        var projects = data.projects.map(function (rawProject, index) {
+          return normalizeProject(rawProject, index, usedIds);
+        });
+
+        renderSubtitle(data.lastUpdated);
+        renderSummary(projects);
+
+        gridElement.textContent = "";
+        if (projects.length === 0) {
+          gridElement.hidden = true;
+          showState("empty", "No projects to show yet.");
+          return;
+        }
+        projects.forEach(function (project) {
+          gridElement.appendChild(createProjectCard(project));
+        });
+        gridElement.hidden = false;
+        hideState();
+      }
+
+      /* ---------- Loading ---------- */
+
+      function loadProjectData() {
+        return fetch(DATA_URL, { cache: "no-store" })
+          .catch(function (networkError) {
+            console.error("Network error while fetching " + DATA_URL, networkError);
+            throw new DataError("Could not load project-data.json (network error). Is the server running?");
+          })
+          .then(function (response) {
+            if (!response.ok) {
+              throw new DataError("Could not load project-data.json (HTTP " + response.status + ").");
+            }
+            return response.text();
+          })
+          .then(function (bodyText) {
+            var data;
+            try {
+              data = JSON.parse(bodyText);
+            } catch (parseError) {
+              console.error("Invalid JSON in " + DATA_URL, parseError);
+              throw new DataError("Could not read project data (invalid JSON).");
+            }
+            if (data === null || typeof data !== "object" || !Array.isArray(data.projects)) {
+              throw new DataError("Project data is malformed: expected a 'projects' list.");
+            }
+            return data;
+          });
+      }
+
+      function start() {
+        showState("loading", "Loading projects…");
+
+        if (window.location.protocol === "file:") {
+          showState(
+            "error",
+            "This dashboard must be served over HTTP. In VS Code, open Run and Debug and start \"Run Project Pulse Dashboard\"."
+          );
+          console.error("Project Pulse was opened via file://; fetch() of project-data.json is blocked.");
+          return;
+        }
+
+        loadProjectData()
+          .then(renderDashboard)
+          .catch(function (error) {
+            console.error("Project Pulse failed to load:", error);
+            var message = error instanceof DataError
+              ? error.message
+              : "Something went wrong while showing projects.";
+            gridElement.hidden = true;
+            showState("error", message);
+          });
+      }
+
+      start();
+    })();
+  </script>
+</body>
+</html>

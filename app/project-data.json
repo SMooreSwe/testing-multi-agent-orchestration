@@ -1,0 +1,71 @@
+{
+  "lastUpdated": "2026-11-11",
+  "projects": [
+    {
+      "id": "pulse-api",
+      "name": "Pulse API",
+      "owner": "Mona",
+      "status": "on-track",
+      "priority": "high",
+      "progress": 65,
+      "dueDate": "2026-12-15",
+      "summary": "Public REST API that powers the Project Pulse dashboard and partner integrations.",
+      "recentActivity": "Merged rate-limiting PR; reviewing auth changes."
+    },
+    {
+      "id": "docs-refresh",
+      "name": "Contributor Docs Refresh",
+      "owner": "Octocat",
+      "status": "at-risk",
+      "priority": "medium",
+      "progress": 40,
+      "dueDate": "2026-11-30",
+      "summary": "Rewrite the getting-started guide and contribution checklist for new contributors.",
+      "recentActivity": "Two reviewers unavailable this week; draft of setup guide pending feedback."
+    },
+    {
+      "id": "ci-migration",
+      "name": "CI Pipeline Migration",
+      "owner": "Hubot",
+      "status": "blocked",
+      "priority": "high",
+      "progress": 25,
+      "dueDate": "2026-10-31",
+      "summary": "Move legacy build jobs to GitHub Actions with caching and matrix testing.",
+      "recentActivity": "Waiting on runner permissions from the platform team."
+    },
+    {
+      "id": "design-system",
+      "name": "Design System Tokens",
+      "owner": "Mona",
+      "status": "completed",
+      "priority": "low",
+      "progress": 100,
+      "dueDate": "2026-10-15",
+      "summary": "Shared color, spacing and typography tokens used across Mona's web projects.",
+      "recentActivity": "Released v1.0 and published the changelog."
+    },
+    {
+      "id": "mobile-companion",
+      "name": "Mobile Companion App",
+      "owner": "Octocat",
+      "status": "not-started",
+      "priority": "low",
+      "progress": 0,
+      "dueDate": "2027-03-01",
+      "summary": "Lightweight mobile view of project health with push notifications for blockers.",
+      "recentActivity": "Kickoff meeting scheduled for next sprint."
+    },
+    {
+      "id": "accessibility-audit",
+      "name": "Accessibility Audit and Remediation for the Entire Contributor Onboarding Experience",
+      "owner": "Mona and the Accessibility Working Group",
+      "status": "on-track",
+      "priority": "medium",
+      "progress": 80,
+      "dueDate": "2027-01-20",
+      "summary": "End-to-end review of keyboard navigation, screen reader labels, color contrast and focus order across every onboarding page, followed by fixes and regression tests.",
+      "recentActivity": "Fixed focus traps in the signup dialog; contrast fixes in review at https://example.com/a-very-long-review-link-without-breaks."
+    }
+  ]
+}
